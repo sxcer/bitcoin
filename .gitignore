@@ -1,9 +1,9 @@
 *.tar.gz
 
 *.exe
-src/bitcoin
-src/bitcoind
-src/bitcoin-cli
+src/sexcoin
+src/sexcoind
+src/sexcoin-cli
 src/test/test_bitcoin
 src/qt/test/test_bitcoin-qt
 
