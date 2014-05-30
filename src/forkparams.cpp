@@ -12,6 +12,8 @@ using namespace std;
 static CForkParams forkParams;
 
 #define FORK1_HEIGHT 155000
+#define FORK2_HEIGHT 572000
+#define FORK3_HEIGHT 643808
 
 // Constructor
 CForkParams::CForkParams() {
@@ -25,13 +27,22 @@ CForkParams::CForkParams() {
         nTargetTimespan_Fork1 = 30 * 60; // 30 minutes
         nTargetSpacing_Fork1 = 30; // 30 seconds
         // Interval 60 blocks
+        
+        // Fork2 - Replace Retarget Algo with KGW
+        //         In Fork2 these vars are only used by ComputeMinWork
+        nTargetTimespan_Fork2 = 15 * 60; // 15 Minutes
+        nTargetSpacing_Fork2 = 60; // 60 seconds
+        // Interval 15 blocks
 
+        nKGWHeight = FORK2_HEIGHT; // when to start using KGW algo
+        nKGWTimeWarpFixHeight = FORK3_HEIGHT; // when to use "fixed" KGW algo code
 }
 
 int64_t CForkParams::Timespan() const {
     //int64_t height=GetHeight();
     int64_t height=chainActive.Height();
     if ( height >= FORK1_HEIGHT ) { return nTargetTimespan_Fork1; }
+    if ( height >= FORK2_HEIGHT ) { return nTargetTimespan_Fork2; }
     return nTargetTimespan;
 }
 
@@ -39,10 +50,13 @@ int64_t CForkParams::Spacing() const {
     //int64_t height=GetHeight();
     int64_t height=chainActive.Height();
     if  ( height >= FORK1_HEIGHT ) { return nTargetSpacing_Fork1; }
+    if  ( height >= FORK2_HEIGHT ) { return nTargetSpacing_Fork2; }
     return nTargetSpacing;
 }
 
 int64_t CForkParams::Interval() const { return Timespan()/Spacing(); }
+int64_t CForkParams::KGWHeight() const { return nKGWHeight; }
+int64_t CForkParams::KGWTimeWarpFixHeight() const { return nKGWTimeWarpFixHeight; }
 
 static CForkParams *pCurrentForkingParams = &forkParams;
 const CForkParams &ForkingParams() { return *pCurrentForkingParams; }

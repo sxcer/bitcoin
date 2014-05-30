@@ -27,6 +27,8 @@ class CForkParams {
         int64_t Timespan() const;
         int64_t Spacing() const;
         int64_t Interval() const;
+        int64_t KGWHeight() const;
+        int64_t KGWTimeWarpFixHeight() const;
     protected:
         // Timespan and Spacing values are moved here from global vars in main.cpp
 
@@ -37,6 +39,17 @@ class CForkParams {
         // Fork1 - Tweak Difficulty Calc window etc
         int64_t nTargetTimespan_Fork1;
         int64_t nTargetSpacing_Fork1;
+
+        // Fork2 - Replace Retarget Algo with KGW
+        //         In Fork2 these vars are only used by ComputeMinWork
+        int64_t nTargetTimespan_Fork2;
+        int64_t nTargetSpacing_Fork2;
+
+        // When to switch to Original KGW Algorithm (Vulnerable to Time Warp Attack)
+        int64_t nKGWHeight;
+
+        // When to switch to Anti-TimeWarp Attack KGW Algorithm
+        int64_t nKGWTimeWarpFixHeight;
 };
 
 /*

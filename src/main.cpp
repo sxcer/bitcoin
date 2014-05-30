@@ -1,5 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2013-2014 Sexcoin Developers
+// Copyright (c) 2013-2079 Dr. Kimoto Chan (KGW Algo)
+// Copyright (c) 2013-2079 The Megacoin developers (KGW Algo)
+// Copyright (c)      2014 Auroracoin Developers (KGW Time Warp Fix)
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1266,10 +1270,112 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
     return bnResult.GetCompact();
 }
 
+unsigned int KimotoGravityWell(const CBlockIndex* pindexLast) {
+    /* current difficulty formula, megacoin - kimoto gravity well */
+    const CBlockIndex   *BlockLastSolved                 = pindexLast;
+    const CBlockIndex   *BlockReading                    = pindexLast;
+
+    uint64_t             PastBlocksMass                  = 0;
+    int64_t              PastRateActualSeconds           = 0;
+    int64_t              PastRateTargetSeconds           = 0;
+    double               PastRateAdjustmentRatio         = double(1);
+    uint256              PastDifficultyAverage;
+    uint256              PastDifficultyAveragePrev;
+    uint256              BlockReadingDifficulty;
+    double               EventHorizonDeviation;
+    double               EventHorizonDeviationFast;
+    double               EventHorizonDeviationSlow;
+
+    static const int64_t TargetBlockSpacing              = 60;
+    unsigned int         TimeDaySeconds                  = 60 * 60 * 24;
+    int64_t              PastSecondsMin                  = TimeDaySeconds * 0.25;
+    int64_t              PastSecondsMax                  = TimeDaySeconds * 7;
+    uint64_t             PastBlocksMin                   = PastSecondsMin / TargetBlockSpacing;
+    uint64_t             PastBlocksMax                   = PastSecondsMax / TargetBlockSpacing;
+
+    int64_t              TimeWarpFixHeight               = ForkingParams().KGWTimeWarpFixHeight();
+
+    if (BlockLastSolved == NULL || BlockLastSolved->nHeight == 0 ||
+        (uint64_t)BlockLastSolved->nHeight < PastBlocksMin) {
+        return Params().ProofOfWorkLimit().GetCompact();
+    }
+    
+    int64_t LatestBlockTime = BlockLastSolved->GetBlockTime();
+    
+    for (unsigned int i = 1; BlockReading && BlockReading->nHeight > 0; i++) {
+        if (PastBlocksMax > 0 && i > PastBlocksMax) { break; }
+        PastBlocksMass++;
+
+        if (i == 1) {
+            PastDifficultyAverage.SetCompact(BlockReading->nBits);
+        } else {
+            BlockReadingDifficulty.SetCompact(BlockReading->nBits);
+            if (BlockReadingDifficulty > PastDifficultyAveragePrev) {
+                PastDifficultyAverage = PastDifficultyAveragePrev + ((BlockReadingDifficulty - PastDifficultyAveragePrev) / i);
+            } else {
+                PastDifficultyAverage = PastDifficultyAveragePrev - ((PastDifficultyAveragePrev - BlockReadingDifficulty) / i);
+            }
+        }
+        PastDifficultyAveragePrev = PastDifficultyAverage;
+
+        if (LatestBlockTime < BlockReading->GetBlockTime()) {
+            if (BlockReading->nHeight > TimeWarpFixHeight)
+                LatestBlockTime = BlockReading->GetBlockTime();
+        }
+        PastRateActualSeconds = LatestBlockTime - BlockReading->GetBlockTime();
+        PastRateTargetSeconds = TargetBlockSpacing * PastBlocksMass;
+        PastRateAdjustmentRatio = double(1);
+        if (BlockReading->nHeight > TimeWarpFixHeight) {
+            if (PastRateActualSeconds < 1) { PastRateActualSeconds = 1; }
+        } else {
+            if (PastRateActualSeconds < 0) { PastRateActualSeconds = 0; }
+        }
+        if (PastRateActualSeconds != 0 && PastRateTargetSeconds != 0) {
+            PastRateAdjustmentRatio = double(PastRateTargetSeconds) / double(PastRateActualSeconds);
+        }
+        EventHorizonDeviation                   = 1 + (0.7084 * pow((double(PastBlocksMass)/double(144)), -1.228));
+        EventHorizonDeviationFast               = EventHorizonDeviation;
+        EventHorizonDeviationSlow               = 1 / EventHorizonDeviation;
+
+        if (PastBlocksMass >= PastBlocksMin) {
+            if ((PastRateAdjustmentRatio <= EventHorizonDeviationSlow) ||
+                (PastRateAdjustmentRatio >= EventHorizonDeviationFast)) {
+                assert(BlockReading);
+                break;
+            }
+        }
+        if (BlockReading->pprev == NULL) { assert(BlockReading); break; }
+        BlockReading = BlockReading->pprev;
+    }
+
+    uint256 bnNew(PastDifficultyAverage);
+    if (PastRateActualSeconds != 0 && PastRateTargetSeconds != 0) {
+        bnNew *= PastRateActualSeconds;
+        bnNew /= PastRateTargetSeconds;
+    }
+    if (bnNew > Params().ProofOfWorkLimit()) { bnNew = Params().ProofOfWorkLimit(); }
+
+    // debug print
+    if ( BlockLastSolved->nHeight > TimeWarpFixHeight ) {
+        LogPrintf("GetNextWorkRequired RETARGET (KGW with Time Warp Fix)\n");
+    } else {
+        LogPrintf("GetNextWorkRequired RETARGET (KGW Original)\n");
+    }
+    LogPrintf("PastRateAdjustmentRatio =  %g    PastRateTargetSeconds = %d    PastRateActualSeconds = %d\n",
+               PastRateAdjustmentRatio, PastRateTargetSeconds, PastRateActualSeconds);
+    LogPrintf("Before: %08x  %s\n", BlockLastSolved->nBits, uint256().SetCompact(BlockLastSolved->nBits).ToString());
+    LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
+
+    return bnNew.GetCompact();
+}
+
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
-    
+
+    //Are we using KGW now?
+    if ( pindexLast->nHeight+1 >= ForkingParams().KGWHeight() ) { return KimotoGravityWell(pindexLast); }
+
     //Get BlockHeight dependent values
     int64_t nTargetTimespan = ForkingParams().Timespan();
     int64_t nTargetSpacing = ForkingParams().Spacing();
