@@ -22,6 +22,8 @@
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/random/uniform_int.hpp>
 
 using namespace std;
 using namespace boost;
@@ -68,7 +70,7 @@ map<uint256, set<uint256> > mapOrphanTransactionsByPrev;
 // Constant stuff for coinbase transactions we create:
 CScript COINBASE_FLAGS;
 
-const string strMessageMagic = "Bitcoin Signed Message:\n";
+const string strMessageMagic = "Sexcoin Signed Message:\n";
 
 // Internal stuff
 namespace {
@@ -1127,7 +1129,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos)
     }
 
     // Check the header
-    if (!CheckProofOfWork(block.GetHash(), block.nBits))
+    if (!CheckProofOfWork(block.GetPoWHash(), block.nBits))
         return error("ReadBlockFromDisk : Errors in block header");
 
     return true;
@@ -1182,23 +1184,59 @@ void static PruneOrphanBlocks()
     mapOrphanBlocks.erase(hash);
 }
 
+int static generateMTRandom(int s, int range)
+{
+    boost::mt19937 gen(s);
+    uniform_int<> dist(1,range);
+    return dist(gen);
+}
+
+
 int64_t GetBlockValue(int nHeight, int64_t nFees)
 {
-    int64_t nSubsidy = 50 * COIN;
+    // NOTE: It will cause a hardfork, but we could introduce actual
+    //       randomness to the superblock calculation to prevent pre-
+    //       calculation of which blocks in the blockchain will be
+    //       superblocks.
+    //       Incorporating something unkown and unpredictable such as
+    //       the blocktime or block hash of the previous block should
+    //       suffice.
+
+    // Standard block gets 100 SXC reward(subject to conditions below)
+    int64_t nSubsidy = 100 * COIN;
     int halvings = nHeight / Params().SubsidyHalvingInterval();
 
     // Force block reward to zero when right shift is undefined.
     if (halvings >= 64)
         return nFees;
 
-    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
+    // Premine bounties
+    if(nHeight < 3) { // Block 1 and 2 get 1 Million SXC each
+        nSubsidy = 1000000 * COIN;
+    } else if(nHeight < 5001) { // Block 3 through 5000 get 200 SXC
+        nSubsidy = 200 * COIN;
+    }
+
+    // Superblock random reward
+    // A psuedo-random pattern is used to select "super blocks" which
+    // getet either 50x or 5x normal subsidy
+    int rand = generateMTRandom(nHeight, 100000);
+
+    if(rand > 99990) {
+        nSubsidy *= 50;
+    } else if (rand < 2001) {
+        nSubsidy *= 5 ;
+    }
+
+    // Any subsidy determined above is halved for every 600000 blocks that
+    // have been found
     nSubsidy >>= halvings;
 
     return nSubsidy + nFees;
 }
 
-static const int64_t nTargetTimespan = 14 * 24 * 60 * 60; // two weeks
-static const int64_t nTargetSpacing = 10 * 60;
+static const int64_t nTargetTimespan = 8 * 60 * 60; // 8 hours
+static const int64_t nTargetSpacing = 60; // 1 minute
 static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 
 //
@@ -1257,9 +1295,15 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
         return pindexLast->nBits;
     }
 
+    // This fixes an issue where a 51% attack can change difficulty at will.
+    // Go back the full period unless it's the first retarget after genesis. Code courtesy of Art Forz
+    int blockstogoback = nInterval-1;
+    if ((pindexLast->nHeight+1) != nInterval)
+        blockstogoback = nInterval;
+
     // Go back by what we want to be 14 days worth of blocks
     const CBlockIndex* pindexFirst = pindexLast;
-    for (int i = 0; pindexFirst && i < nInterval-1; i++)
+    for (int i = 0; pindexFirst && i < blockstogoback; i++)
         pindexFirst = pindexFirst->pprev;
     assert(pindexFirst);
 
@@ -2332,7 +2376,7 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool fCheckPOW)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits))
+    if (fCheckPOW && !CheckProofOfWork(block.GetPoWHash(), block.nBits))    
         return state.DoS(50, error("CheckBlockHeader() : proof of work failed"),
                          REJECT_INVALID, "high-hash");
 
@@ -2565,6 +2609,9 @@ bool AcceptBlock(CBlock& block, CValidationState& state, CBlockIndex** ppindex, 
 
 bool CBlockIndex::IsSuperMajority(int minVersion, const CBlockIndex* pstart, unsigned int nRequired, unsigned int nToCheck)
 {
+    // disable version 2 block lock-in
+    return false;
+
     unsigned int nFound = 0;
     for (unsigned int i = 0; i < nToCheck && nFound < nRequired && pstart != NULL; i++)
     {

@@ -70,6 +70,7 @@ protected:
 
     uint256 hashGenesisBlock;
     MessageStartChars pchMessageStart;
+    MessageStartChars pchMessageStart2;
     // Raw pub key bytes for the broadcast alert signing key.
     vector<unsigned char> vAlertPubKey;
     int nDefaultPort;
