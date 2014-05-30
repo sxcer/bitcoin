@@ -40,6 +40,7 @@ BITCOIN_CORE_H = \
   core.h \
   crypter.h \
   db.h \
+  forkparams.h \
   hash.h \
   init.h \
   key.h \
@@ -94,6 +95,7 @@ libbitcoin_server_a_SOURCES = \
   bloom.cpp \
   checkpoints.cpp \
   coins.cpp \
+  forkparams.cpp \
   init.cpp \
   keystore.cpp \
   leveldbwrapper.cpp \

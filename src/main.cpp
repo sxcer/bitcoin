@@ -16,6 +16,7 @@
 #include "txmempool.h"
 #include "ui_interface.h"
 #include "util.h"
+#include "forkparams.h"
 
 #include <sstream>
 
@@ -1235,10 +1236,6 @@ int64_t GetBlockValue(int nHeight, int64_t nFees)
     return nSubsidy + nFees;
 }
 
-static const int64_t nTargetTimespan = 8 * 60 * 60; // 8 hours
-static const int64_t nTargetSpacing = 60; // 1 minute
-static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
-
 //
 // minimum amount of work that could possibly be required nTime after
 // minimum work required was nBase
@@ -1246,6 +1243,10 @@ static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 {
     const uint256 &bnLimit = Params().ProofOfWorkLimit();
+    //Get BlockHeight dependent values
+    int64_t nTargetTimespan = ForkingParams().Timespan();
+    int64_t nTargetSpacing = ForkingParams().Spacing();
+ 
     // Testnet has min-difficulty blocks
     // after nTargetSpacing*2 time between blocks:
     if (TestNet() && nTime > nTargetSpacing*2)
@@ -1268,6 +1269,11 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock)
 {
     unsigned int nProofOfWorkLimit = Params().ProofOfWorkLimit().GetCompact();
+    
+    //Get BlockHeight dependent values
+    int64_t nTargetTimespan = ForkingParams().Timespan();
+    int64_t nTargetSpacing = ForkingParams().Spacing();
+    int64_t nInterval = ForkingParams().Interval();
 
     // Genesis block
     if (pindexLast == NULL)
