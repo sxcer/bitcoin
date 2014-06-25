@@ -29,14 +29,10 @@ public:
         // The message start string is designed to be unlikely to occur in normal data.
         // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
         // a large 4-byte int at any alignment.
-        pchMessageStart[0] = 0xfb;
-        pchMessageStart[1] = 0xc0;
-        pchMessageStart[2] = 0xb6;
-        pchMessageStart[3] = 0xdb;
-        pchMessageStart2[0] = 0xfa;
-        pchMessageStart2[1] = 0xce;
-        pchMessageStart2[2] = 0x66;
-        pchMessageStart2[3] = 0x66;
+        pchMessageStart[0] = 0xfa;
+        pchMessageStart[1] = 0xce;
+        pchMessageStart[2] = 0x69;
+        pchMessageStart[3] = 0x69;
         vAlertPubKey = ParseHex("04979872c9155e2d8344832d446a023dd1b80ca2126740fe1031fd3d259349e1095f90d4e05852bc2e27b13b8a30363e87c754c28dda22857b8197c42d949a7c77");
         nDefaultPort = 9560;
         nRPCPort = 9561;
@@ -117,14 +113,10 @@ public:
         // The message start string is designed to be unlikely to occur in normal data.
         // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
         // a large 4-byte int at any alignment.
-        pchMessageStart[0] = 0xfc;
-        pchMessageStart[1] = 0xc1;
-        pchMessageStart[2] = 0xb7;
-        pchMessageStart[3] = 0xdc;
-        //pchMessageStart[0] = 0xfa;
-        //pchMessageStart[1] = 0xce;
-        //pchMessageStart[2] = 0x66;
-        //pchMessageStart[3] = 0x66;
+        pchMessageStart[0] = 0xfa;
+        pchMessageStart[1] = 0xce;
+        pchMessageStart[2] = 0x69;
+        pchMessageStart[3] = 0x69;
         vAlertPubKey = ParseHex("04979872c9155e2d8344832d446a023dd1b80ca2126740fe1031fd3d259349e1095f90d4e05852bc2e27b13b8a30363e87c754c28dda22857b8197c42d949a7c77");
         nDefaultPort = 19560;
         nRPCPort = 19561;
@@ -158,14 +150,10 @@ static CTestNetParams testNetParams;
 class CRegTestParams : public CTestNetParams {
 public:
     CRegTestParams() {
-        pchMessageStart[0] = 0xfc;
-        pchMessageStart[1] = 0xc1;
-        pchMessageStart[2] = 0xb7;
-        pchMessageStart[3] = 0xdc;
-        //pchMessageStart[0] = 0xfa;
-        //pchMessageStart[1] = 0xce;
-        //pchMessageStart[2] = 0x66;
-        //pchMessageStart[3] = 0x66;
+        pchMessageStart[0] = 0xfa;
+        pchMessageStart[1] = 0xce;
+        pchMessageStart[2] = 0x69;
+        pchMessageStart[3] = 0x69;
         nSubsidyHalvingInterval = 150;
         bnProofOfWorkLimit = ~uint256(0) >> 1;
         //genesis.nTime = 1296688602;
