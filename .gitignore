@@ -52,7 +52,8 @@ src/qt/test/moc*.cpp
 *.qm
 Makefile
 bitcoin-qt
-Bitcoin-Qt.app
+sexcoin-qt
+Sexcoin-Qt.app
 
 # Unit-tests
 Makefile.test
@@ -83,3 +84,6 @@ qa/pull-tester/run-bitcoind-for-test.sh
 qa/pull-tester/build-tests.sh
 
 !src/leveldb*/Makefile
+
+#KDE Dolphin
+.directory
